@@ -1,77 +1,112 @@
 #!/bin/bash
+
 set -e
 
-echo "================================================"
-echo " Installing DevOps Tools on Ubuntu"
-echo "================================================"
+echo "🚀 Starting DevOps Setup..."
 
-# ── Update system ──────────────────────────────────
-echo "→ Updating system..."
+# -----------------------------
+# 1. Update System
+# -----------------------------
+echo "📦 Updating system..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl wget unzip gnupg \
-  software-properties-common apt-transport-https \
-  ca-certificates lsb-release git
 
-# ── AWS CLI ────────────────────────────────────────
-echo "→ Installing AWS CLI..."
-curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-unzip -q awscliv2.zip
-sudo ./aws/install
-rm -rf aws awscliv2.zip
-echo "✅ AWS CLI: $(aws --version)"
+# -----------------------------
+# 2. Install Dependencies
+# -----------------------------
+echo "🔧 Installing dependencies..."
+sudo apt install -y ca-certificates curl gnupg lsb-release unzip software-properties-common
 
-# ── kubectl ────────────────────────────────────────
-echo "→ Installing kubectl..."
-KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-curl -LO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-chmod +x kubectl
-sudo mv kubectl /usr/local/bin/kubectl
-echo "✅ kubectl: $(kubectl version --client --short 2>/dev/null)"
+# -----------------------------
+# 3. Install Docker
+# -----------------------------
+echo "🐳 Installing Docker..."
+sudo mkdir -p /etc/apt/keyrings
 
-# ── Helm ───────────────────────────────────────────
-echo "→ Installing Helm..."
-curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-echo "✅ Helm: $(helm version --short)"
-
-# ── Terraform ──────────────────────────────────────
-echo "→ Installing Terraform..."
-wget -O- https://apt.releases.hashicorp.com/gpg | \
-  sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] \
-  https://apt.releases.hashicorp.com $(lsb_release -cs) main" | \
-  sudo tee /etc/apt/sources.list.d/hashicorp.list > /dev/null
-sudo apt update && sudo apt install -y terraform
-echo "✅ Terraform: $(terraform --version | head -1)"
-
-# ── Docker ─────────────────────────────────────────
-echo "→ Installing Docker..."
-sudo apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
-  sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-sudo systemctl start docker
-sudo systemctl enable docker
-sudo usermod -aG docker $USER
-echo "✅ Docker: $(docker --version)"
+sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
 
-# ── Final verification ─────────────────────────────
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo \
+"deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+sudo systemctl enable docker
+sudo systemctl start docker
+
+sudo usermod -aG docker $USER
+
+echo "✅ Docker Installed"
+
+# -----------------------------
+# 4. Install kubectl
+# -----------------------------
+echo "☸️ Installing kubectl..."
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+
+echo "✅ kubectl Installed"
+
+# -----------------------------
+# 5. Install Helm
+# -----------------------------
+echo "📦 Installing Helm..."
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+echo "✅ Helm Installed"
+
+# -----------------------------
+# 6. Install AWS CLI
+# -----------------------------
+echo "☁️ Installing AWS CLI..."
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+
+unzip awscliv2.zip
+sudo ./aws/install
+
+echo "✅ AWS CLI Installed"
+
+# -----------------------------
+# 7. Install Nginx
+# -----------------------------
+echo "🌐 Installing Nginx..."
+sudo apt install -y nginx
+
+sudo systemctl enable nginx
+sudo systemctl start nginx
+
+echo "✅ Nginx Installed"
+
+# -----------------------------
+# 8. Cleanup
+# -----------------------------
+rm -rf aws awscliv2.zip
+
+# -----------------------------
+# 9. Verification
+# -----------------------------
+echo "🔍 Verifying installations..."
+
+docker --version
+kubectl version --client
+helm version
+aws --version
+nginx -v
+
+echo "🎉 DevOps Setup Completed!"
+
+echo "⚠️ IMPORTANT: Logout and login again to use Docker without sudo"
+
+# -----------------------------
+# 10. AWS Configure Reminder
+# -----------------------------
 echo ""
-echo "================================================"
-echo " All tools installed successfully!"
-echo "================================================"
-echo "AWS CLI:   $(aws --version)"
-echo "kubectl:   $(kubectl version --client --short 2>/dev/null)"
-echo "Helm:      $(helm version --short)"
-echo "Terraform: $(terraform --version | head -1)"
-echo "Docker:    $(docker --version)"
+echo "👉 Run this command to configure AWS:"
+echo "aws configure"
 echo ""
-echo "NEXT STEPS:"
-echo "  1. Run: aws configure"
-echo "  2. Log out and back in (for Docker permissions)"
-echo "  3. Run: aws sts get-caller-identity"
-echo "================================================"
